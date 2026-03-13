@@ -113,7 +113,7 @@ def scrape_techworld_news(days_to_scrape=1):
                         'content_summary': content[:200].replace('\n', ' '),
                         'enveloped_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                         'date': str(full_date_time),
-                        'provider': '테크월드뉴스',
+                        'provider': '테크월드',
                         'category_main': cat_main,
                         'category_sub': cat_sub,
                         'provider_link_page': link,

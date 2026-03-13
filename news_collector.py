@@ -8,7 +8,7 @@ import concurrent.futures
 # utf-8 for console output robustness
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
-import zdwang_news_crawler as zdwang_crawler  # 파일 이름에 맞게 수정
+import zdwang_crawler
 import cheaa_crawler
 import samsung_crawler
 import techworld_crawler
@@ -27,6 +27,8 @@ COLUMNS = [
 
 print(f"\n🚀 최근 {DATE_THRESHOLD}일치 데이터 수집을 시작합니다...")
 
+import businesspost_crawler
+
 # 2. 크롤러 등록 (작업 리스트화)
 # 각 크롤러의 인스턴스나 실행 함수를 리스트에 담아 관리합니다.
 # 만약 앞서 리팩토링한 것처럼 클래스 형태라면 인스턴스를 생성합니다.
@@ -35,7 +37,8 @@ crawler_tasks = [
     {"name": "CHEAA", "func": cheaa_crawler.get_cheaa_data},
     {"name": "SAMSUNG", "func": lambda days: samsung_crawler.SamsungCrawler().run(days)},
     {"name": "TECHWORLD", "func": techworld_crawler.scrape_techworld_news},
-    {"name": "IROBOTNEWS", "func": irobotnews_crawler.get_irobotnews_data}
+    {"name": "IROBOTNEWS", "func": irobotnews_crawler.get_irobotnews_data},
+    {"name": "BUSINESSPOST", "func": businesspost_crawler.get_businesspost_data}
 ]
 
 all_data = []

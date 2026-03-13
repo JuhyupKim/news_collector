@@ -91,7 +91,7 @@ def get_cheaa_data(days_to_scrape=1):
                     'provider': 'cheaa',
                     'category_main': translate_text(cat_main), 
                     'category_sub': '',
-                    'provider_link_page': link, 'useful': 1, 'strategy_agenda': 1,
+                    'provider_link_page': link, 'useful': 1, 'strategy_agenda': 0,
                     'content_summary': translate_text(content[:200]),
                     'category1': 'cheaa', 'category2': '',
                     'YEAR': date_obj.year, 'MONTH': date_obj.month, 'WEEK': date_obj.isocalendar()[1]

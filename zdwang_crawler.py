@@ -84,7 +84,7 @@ def get_zdwang_data(days_to_scrape=1):
                         'date': str(full_date_time), # 💡 강제 문자열 변환
                         'provider': 'zdwang',
                         'category_main': cat['main'], 'category_sub': cat['sub'],
-                        'provider_link_page': link, 'useful': 1, 'strategy_agenda': 1,
+                        'provider_link_page': link, 'useful': 1, 'strategy_agenda': 0,
                         'content_summary': translate_text(content[:200]),
                         'category1': 'zdwang', 'category2': cat['sub'],
                         'YEAR': date_obj.year, 'MONTH': date_obj.month, 'WEEK': date_obj.isocalendar()[1]
