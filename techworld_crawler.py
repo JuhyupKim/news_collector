@@ -57,8 +57,7 @@ def scrape_techworld_news(days_to_scrape=1):
                             ext_time += ":00"
                         full_date_time = f"{ext_date} {ext_time}"
                     else:
-                        # 날짜가 전혀 없으면 기본값 부여
-                        full_date_time = datetime.now().strftime("%Y-%m-%d 00:00:00")
+                        continue
                         
                     date_obj = datetime.strptime(full_date_time, '%Y-%m-%d %H:%M:%S')
                     
@@ -143,14 +142,20 @@ def scrape_techworld_news(days_to_scrape=1):
     return results
 
 if __name__ == "__main__":
-    print("크롤링을 시작합니다...")
-    crawled_data = scrape_techworld_news(days_to_scrape=1)
+    import argparse
+    parser = argparse.ArgumentParser(description="Run Techworld crawler independently.")
+    parser.add_argument("--days", type=int, default=1, help="Number of days to scrape (DATE_THRESHOLD)")
+    args = parser.parse_args()
+
+    print(f"테크월드뉴스 크롤링을 시작합니다. (과거 {args.days}일)")
+    crawled_data = scrape_techworld_news(days_to_scrape=args.days)
     
     if crawled_data:
         import os
+        import csv
         os.makedirs("output", exist_ok=True)
         today_str = datetime.now().strftime('%Y%m%d')
-        filename = f"output/{today_str}_테크월드뉴스.csv"
+        filename = f"output/{today_str}_techworld.csv"
         
         keys = crawled_data[0].keys()
         with open(filename, 'w', encoding='utf-8-sig', newline='') as f:

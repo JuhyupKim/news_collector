@@ -13,6 +13,7 @@ import cheaa_crawler
 import samsung_crawler
 import techworld_crawler
 import irobotnews_crawler
+import google_news_crawler
 
 # oo일전 뉴스부터 수집
 DATE_THRESHOLD = 1
@@ -38,7 +39,8 @@ crawler_tasks = [
     {"name": "SAMSUNG", "func": lambda days: samsung_crawler.SamsungCrawler().run(days)},
     {"name": "TECHWORLD", "func": techworld_crawler.scrape_techworld_news},
     {"name": "IROBOTNEWS", "func": irobotnews_crawler.get_irobotnews_data},
-    {"name": "BUSINESSPOST", "func": businesspost_crawler.get_businesspost_data}
+    {"name": "BUSINESSPOST", "func": businesspost_crawler.get_businesspost_data},
+    {"name": "GOOGLE_NEWS", "func": google_news_crawler.get_google_news_data}
 ]
 
 all_data = []

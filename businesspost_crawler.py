@@ -55,8 +55,8 @@ def get_businesspost_data(days_to_scrape=1):
                     # 상세 본문 추출
                     content = ""
                     cat_main, cat_sub = "분류", "뉴스"
-                    full_date_time = datetime.now().strftime("%Y-%m-%d 00:00:00")
-                    date_obj = datetime.now()
+                    full_date_time = ""
+                    date_obj = None
                     
                     try:
                         det_resp = requests.get(link, headers=headers, timeout=15)
@@ -99,6 +99,9 @@ def get_businesspost_data(days_to_scrape=1):
                     except Exception as det_e:
                         print(f"  ❌ 상세 본문 오류 ({link}): {det_e}")
                     
+                    if date_obj is None:
+                        continue
+                        
                     # 기간 필터링
                     if date_obj.date() < cutoff_date:
                         continue
@@ -139,11 +142,25 @@ def get_businesspost_data(days_to_scrape=1):
     return results
 
 if __name__ == "__main__":
-    print("비즈니스포스트 테스트 실행 중...")
-    data = get_businesspost_data(days_to_scrape=1)
+    import argparse
+    import csv
+    import os
+    parser = argparse.ArgumentParser(description="Run BusinessPost crawler independently.")
+    parser.add_argument("--days", type=int, default=1, help="Number of days to scrape (DATE_THRESHOLD)")
+    args = parser.parse_args()
+
+    print(f"비즈니스포스트 크롤링을 시작합니다. (과거 {args.days}일)")
+    data = get_businesspost_data(days_to_scrape=args.days)
+    
     if data:
-        print(f"✅ {len(data)}건 수집 성공!")
-        print(f"제목 미리보기: {data[0]['title']}")
-        print(f"날짜 미리보기: {data[0]['date']}")
+        os.makedirs("output", exist_ok=True)
+        today_str = datetime.now().strftime('%Y%m%d')
+        filename = f"output/{today_str}_businesspost.csv"
+        keys = data[0].keys()
+        with open(filename, 'w', encoding='utf-8-sig', newline='') as f:
+            dict_writer = csv.DictWriter(f, fieldnames=keys)
+            dict_writer.writeheader()
+            dict_writer.writerows(data)
+        print(f"✅ 수집 완료: 총 {len(data)}건 -> {filename}")
     else:
-        print("❌ 수집 실패.")
+        print("수집된 기사가 없습니다.")

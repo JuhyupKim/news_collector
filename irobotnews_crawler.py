@@ -52,7 +52,6 @@ def get_irobotnews_data(days_to_scrape=1):
                     info_area = det_soup.select_one('ul.infomation')
                     info_text = info_area.get_text(separator=" ", strip=True) if info_area else ""
                     
-                    full_date_time = f"{datetime.now().strftime('%Y-%m-%d')} 00:00:00" # 기본값
                     date_match = re.search(r'(\d{4})\.(\d{2})\.(\d{2})\s+(\d{2}:\d{2}(?::\d{2})?)', info_text)
                     
                     if date_match:
@@ -60,13 +59,14 @@ def get_irobotnews_data(days_to_scrape=1):
                         if len(hm) == 5:
                             hm += ":00"
                         full_date_time = f"{y}-{m}-{d} {hm}" # 19자리 맞춤
-                    
-                    date_obj = datetime.strptime(full_date_time, '%Y-%m-%d %H:%M:%S')
-                    
-                    # Cutoff 날짜 필터링
-                    if date_obj.date() < cutoff_date.date():
-                        keep_going = False
-                        break
+                        date_obj = datetime.strptime(full_date_time, '%Y-%m-%d %H:%M:%S')
+                        
+                        # Cutoff 날짜 필터링
+                        if date_obj.date() < cutoff_date.date():
+                            keep_going = False
+                            break
+                    else:
+                        continue
                         
                     # 본문 추출 및 불필요한 태그 제거 (스크립트, 스타일, 이미지 안내 등)
                     content_area = det_soup.select_one('article#article-view-content-div')
@@ -122,14 +122,20 @@ def get_irobotnews_data(days_to_scrape=1):
     return results
 
 if __name__ == "__main__":
-    # 최근 1일치 기사 수집 실행
-    scraped_data = get_irobotnews_data(days_to_scrape=1)
+    import argparse
+    parser = argparse.ArgumentParser(description="Run iRobotNews crawler independently.")
+    parser.add_argument("--days", type=int, default=1, help="Number of days to scrape (DATE_THRESHOLD)")
+    args = parser.parse_args()
+
+    print(f"로봇신문 크롤링을 시작합니다. (과거 {args.days}일)")
+    scraped_data = get_irobotnews_data(days_to_scrape=args.days)
     
     if scraped_data:
         import os
+        import csv
         os.makedirs("output", exist_ok=True)
         today_str = datetime.now().strftime('%Y%m%d')
-        file_name = f"output/{today_str}_로봇신문.csv"
+        file_name = f"output/{today_str}_irobotnews.csv"
         keys = scraped_data[0].keys()
         
         with open(file_name, 'w', encoding='utf-8-sig', newline='') as f:
@@ -137,6 +143,6 @@ if __name__ == "__main__":
             writer.writeheader()
             writer.writerows(scraped_data)
             
-        print(f"\n[성공] 총 {len(scraped_data)}건의 기사가 '{file_name}'로 저장되었습니다.")
+        print(f"\n✅ 수집 완료: 총 {len(scraped_data)}건의 기사가 '{file_name}'로 저장되었습니다.")
     else:
         print("\n[안내] 수집된 데이터가 없습니다.")

@@ -161,3 +161,28 @@ class SamsungCrawler:
         finally:
             if self.driver: self.driver.quit()
         return results
+
+if __name__ == "__main__":
+    import argparse
+    import csv
+    import os
+    parser = argparse.ArgumentParser(description="Run Samsung Newsroom crawler independently.")
+    parser.add_argument("--days", type=int, default=1, help="Number of days to scrape (DATE_THRESHOLD)")
+    args = parser.parse_args()
+    
+    print(f"삼성뉴스룸 크롤링을 시작합니다. (과거 {args.days}일)")
+    crawler = SamsungCrawler()
+    data = crawler.run(days_to_scrape=args.days)
+    
+    if data:
+        os.makedirs("output", exist_ok=True)
+        today_str = datetime.now().strftime('%Y%m%d')
+        filename = f"output/{today_str}_samsung.csv"
+        keys = data[0].keys()
+        with open(filename, 'w', encoding='utf-8-sig', newline='') as f:
+            dict_writer = csv.DictWriter(f, fieldnames=keys)
+            dict_writer.writeheader()
+            dict_writer.writerows(data)
+        print(f"✅ 수집 완료: 총 {len(data)}건 -> {filename}")
+    else:
+        print("수집된 기사가 없습니다.")
