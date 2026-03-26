@@ -4,9 +4,13 @@ from datetime import datetime, timedelta
 import time
 import re
 
-def get_businesspost_data(days_to_scrape=1):
+def get_businesspost_data(days_to_scrape=1, max_items=None, global_seen_links=None):
+    if max_items is not None and max_items <= 0:
+        max_items = None
+        
     cutoff_date = (datetime.now() - timedelta(days=days_to_scrape)).date()
     results = []
+    seen_links = set(global_seen_links) if global_seen_links else set()
     base_url = "https://www.businesspost.co.kr"
     
     page = 1
@@ -15,6 +19,9 @@ def get_businesspost_data(days_to_scrape=1):
     }
     
     while True:
+        if max_items is not None and len(results) >= max_items:
+            break
+            
         # 동적으로 페이징 URL 처리
         list_url = f"https://www.businesspost.co.kr/BP?command=sub&sub=8&page={page}"
         
@@ -37,6 +44,9 @@ def get_businesspost_data(days_to_scrape=1):
             found_in_range = False
             
             for item in items:
+                if max_items is not None and len(results) >= max_items:
+                    break
+                    
                 try:
                     # 링크 추출
                     a_tag = item.select_one("a")
@@ -51,6 +61,10 @@ def get_businesspost_data(days_to_scrape=1):
                         continue
                             
                     link = raw_link if raw_link.startswith('http') else base_url.rstrip('/') + '/' + raw_link.lstrip('/')
+                    
+                    if link in seen_links:
+                        continue
+                    seen_links.add(link)
                     
                     # 상세 본문 추출
                     content = ""

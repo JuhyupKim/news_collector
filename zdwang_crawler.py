@@ -11,9 +11,13 @@ def translate_text(text):
         return GoogleTranslator(source='auto', target='ko').translate(text[:4500])
     except: return text
 
-def get_zdwang_data(days_to_scrape=1):
+def get_zdwang_data(days_to_scrape=1, max_items=None, global_seen_links=None):
+    if max_items is not None and max_items <= 0:
+        max_items = None # 제한 없음
+    
     cutoff_date = datetime.now() - timedelta(days=days_to_scrape)
     results = []
+    seen_links = set(global_seen_links) if global_seen_links else set()
     categories = [
         {'url': 'http://news.zdwang.com/web/', 'main': '뉴스센터', 'sub': '과기쾌보'},
         {'url': 'http://news.zdwang.com/hea/', 'main': '뉴스센터', 'sub': '지혜가전'}
@@ -21,6 +25,9 @@ def get_zdwang_data(days_to_scrape=1):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
     
     for cat in categories:
+        if max_items is not None and len(results) >= max_items:
+            break
+            
         page = 1
         while True:
             list_url = f"{cat['url']}index.html" if page == 1 else f"{cat['url']}{page}.html"
@@ -34,6 +41,9 @@ def get_zdwang_data(days_to_scrape=1):
                 
                 found_in_range = False
                 for item in items:
+                    if max_items is not None and len(results) >= max_items:
+                        break
+                        
                     pubtime_tag = item.select_one('span.pubtime')
                     if not pubtime_tag: continue
                     
@@ -46,6 +56,9 @@ def get_zdwang_data(days_to_scrape=1):
                     a_tag = item.select_one('H3.title a')
                     raw_href = a_tag['href'].strip()
                     link = raw_href if raw_href.startswith('http') else f"http://news.zdwang.com{raw_href if raw_href.startswith('/') else '/'+raw_href}"
+                    
+                    if link in seen_links: continue
+                    seen_links.add(link)
                     
                     # 상세페이지에서 시/분/초 추출
                     full_date_time = f"{list_date_str} 00:00:00" # 기본값

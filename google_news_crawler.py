@@ -36,7 +36,10 @@ def get_article_content(driver, url):
         print(f"  [GoogleNews] Detail Parsing Error: {e}")
         return "", ""
 
-def get_google_news_data(days_to_scrape=1):
+def get_google_news_data(days_to_scrape=1, max_items=None, global_seen_links=None):
+    if max_items is not None and max_items <= 0:
+        max_items = None
+        
     TARGET_GROUPS = [
         {
             "name": "China Competitors",
@@ -57,6 +60,7 @@ def get_google_news_data(days_to_scrape=1):
 
     search_period = f"{days_to_scrape}d"
     results = []
+    seen_links = set(global_seen_links) if global_seen_links else set()
 
     print(">>> 구글 뉴스 크롤링 시작")
     print(f"※ 최근 {search_period} 뉴스를 검색합니다.")
@@ -69,16 +73,23 @@ def get_google_news_data(days_to_scrape=1):
     chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")
     
     driver = webdriver.Chrome(options=chrome_options)
-    driver.set_page_load_timeout(15)
+    driver.set_page_load_timeout(30) # 타임아웃 30초로 상향
+    driver.set_script_timeout(30)
 
     try:
         for group in TARGET_GROUPS:
+            if max_items is not None and len(results) >= max_items:
+                break
+                
             print(f"\n--- Group: {group['name']} ---")
             for target in group['targets']:
+                if max_items is not None and len(results) >= max_items:
+                    break
+                    
                 target_url = group['url_template'].format(query=target, period=search_period)
                 print(f"Searching: {target}")
                 
-                group_results = crawl_google_rss_url(driver, target_url, target)
+                group_results = crawl_google_rss_url(driver, target_url, target, max_retries=3, seen_links=seen_links)
                 results.extend(group_results)
                 
                 if group_results:
@@ -91,14 +102,23 @@ def get_google_news_data(days_to_scrape=1):
     print("\n>>> 모든 구글 뉴스 크롤링 완료")
     return results
 
-def crawl_google_rss_url(driver, news_url, competitor, max_retries=3):
+def crawl_google_rss_url(driver, news_url, competitor, max_retries=3, seen_links=None):
+    if seen_links is None: seen_links = set()
     retries = 0
     while retries < max_retries:
         try:
             res = requests.get(news_url, timeout=(5, 10))
             if res.status_code == 200:
                 datas = feedparser.parse(res.text).entries
-                parsed_data = parse_rss_entries(driver, competitor, datas)
+                # max_items 제한 고려 (남은 개수만큼만)
+                remaining = None
+                if 'max_items' in globals() or 'max_items' in locals(): # 이 시점에서는 전달받은 max_items 사용
+                    pass # 루프 내에서 처리됨
+                
+                parsed_data = parse_rss_entries(driver, competitor, datas, seen_links)
+                
+                # 수집 직후 필터링은 parse_rss_entries 내부 혹은 이후 수행 가능하나 
+                # 여기서는 전체를 받은 후 반환 시점의 개수를 상위 루프가 제어함
                 time.sleep(abs(np.random.randn() * 2)) 
                 return parsed_data
             else:
@@ -120,7 +140,7 @@ def crawl_google_rss_url(driver, news_url, competitor, max_retries=3):
     print(f"  [Fail] '{competitor}' 크롤링 최종 실패")
     return []
 
-def parse_rss_entries(driver, competitor, datas):
+def parse_rss_entries(driver, competitor, datas, seen_links):
     enveloped_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     parsed_results = []
 
@@ -132,6 +152,9 @@ def parse_rss_entries(driver, competitor, datas):
             
             provider_link_page = data.link
             provider_link_page = provider_link_page.replace("/rss/", "/")
+            
+            if provider_link_page in seen_links: continue
+            seen_links.add(provider_link_page)
             
             try:
                 datetime_object = datetime.datetime.strptime(data.published, "%a, %d %b %Y %H:%M:%S %Z")

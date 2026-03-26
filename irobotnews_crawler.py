@@ -5,9 +5,13 @@ import time
 import re
 import csv
 
-def get_irobotnews_data(days_to_scrape=1):
+def get_irobotnews_data(days_to_scrape=1, max_items=None, global_seen_links=None):
+    if max_items is not None and max_items <= 0:
+        max_items = None
+        
     cutoff_date = datetime.now() - timedelta(days=days_to_scrape)
     results = []
+    seen_links = set(global_seen_links) if global_seen_links else set()
     base_url = "https://www.irobotnews.com"
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -17,6 +21,9 @@ def get_irobotnews_data(days_to_scrape=1):
     keep_going = True
     
     while keep_going:
+        if max_items is not None and len(results) >= max_items:
+            break
+            
         # 목록 페이지 URL 포맷 (예시로 page 파라미터 활용)
         list_url = f"{base_url}/news/articleList.html?page={page}&view_type=sm"
         
@@ -32,6 +39,10 @@ def get_irobotnews_data(days_to_scrape=1):
                 break
                 
             for item in items:
+                if max_items is not None and len(results) >= max_items:
+                    keep_going = False
+                    break
+                    
                 a_tag = item.select_one('h2.altlist-subject a')
                 if not a_tag:
                     continue
@@ -41,6 +52,9 @@ def get_irobotnews_data(days_to_scrape=1):
                 
                 # 상대 경로를 절대 경로로 변환
                 link = raw_link if raw_link.startswith('http') else f"{base_url}{raw_link if raw_link.startswith('/') else '/' + raw_link}"
+                
+                if link in seen_links: continue
+                seen_links.add(link)
                 
                 # 상세 페이지 진입
                 try:

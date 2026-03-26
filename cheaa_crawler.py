@@ -11,14 +11,21 @@ def translate_text(text):
         return GoogleTranslator(source='auto', target='ko').translate(text[:4500])
     except: return text
 
-def get_cheaa_data(days_to_scrape=1):
+def get_cheaa_data(days_to_scrape=1, max_items=None, global_seen_links=None):
+    if max_items is not None and max_items <= 0:
+        max_items = None
+        
     cutoff_date = datetime.now() - timedelta(days=days_to_scrape)
     results = []
+    seen_links = set(global_seen_links) if global_seen_links else set()
     base_url = "https://m.cheaa.com/"
     headers = {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1"}
     desktop_headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"}
     
     for page in range(1, 4): # 날짜가 섞여있으므로 3페이지까지 넉넉히 검사
+        if max_items is not None and len(results) >= max_items:
+            break
+            
         url = base_url if page == 1 else f"{base_url}include/ajax_more.php?type=index&page={page}"
         try:
             resp = requests.get(url, headers=headers, timeout=15)
@@ -27,6 +34,9 @@ def get_cheaa_data(days_to_scrape=1):
             boxes = soup.select("div.newsBox")
             
             for box in boxes:
+                if max_items is not None and len(results) >= max_items:
+                    break
+                    
                 # 1. 목록에서 날짜 추출
                 date_text = box.select_one("p b").text if box.select_one("p b") else ""
                 date_match = re.search(r'(\d{4}-\d{2}-\d{2})', date_text)
@@ -41,6 +51,9 @@ def get_cheaa_data(days_to_scrape=1):
                 a_tag = box.select_one("p a")
                 link = a_tag['href']
                 if not link.startswith('http'): link = "https://news.cheaa.com" + link
+                
+                if link in seen_links: continue
+                seen_links.add(link)
                 
                 # 2. 상세페이지에서 시/분/초 수집 시도
                 full_date_time = f"{list_date_only} 00:00:00" # 기본값 설정

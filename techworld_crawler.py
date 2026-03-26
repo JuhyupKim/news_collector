@@ -4,10 +4,18 @@ from datetime import datetime, timedelta
 import time
 import re
 import csv
+import urllib3
 
-def scrape_techworld_news(days_to_scrape=1):
+# SSL 인증서 경고 무시
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def scrape_techworld_news(days_to_scrape=1, max_items=None, global_seen_links=None):
+    if max_items is not None and max_items <= 0:
+        max_items = None
+        
     cutoff_date = (datetime.now() - timedelta(days=days_to_scrape)).date()
     results = []
+    seen_links = set(global_seen_links) if global_seen_links else set()
     base_url = "https://www.epnc.co.kr"
     
     page = 1
@@ -16,10 +24,13 @@ def scrape_techworld_news(days_to_scrape=1):
     }
     
     while True:
+        if max_items is not None and len(results) >= max_items:
+            break
+            
         # 목록 페이지 URL (예시 경로)
         list_url = f"{base_url}/news/articleList.html?page={page}"
         try:
-            resp = requests.get(list_url, headers=headers, timeout=15)
+            resp = requests.get(list_url, headers=headers, timeout=15, verify=False)
             resp.encoding = 'utf-8'
             if resp.status_code != 200:
                 break
@@ -37,6 +48,9 @@ def scrape_techworld_news(days_to_scrape=1):
             found_in_range = False
             
             for item in items:
+                if max_items is not None and len(results) >= max_items:
+                    break
+                    
                 # 더미 데이터(샘플) 스킵
                 if item.get('id') == 'sample' or 'blind' in item.get('class', []):
                     continue
@@ -76,10 +90,13 @@ def scrape_techworld_news(days_to_scrape=1):
                     raw_link = title_tag['href']
                     link = raw_link if raw_link.startswith('http') else base_url + raw_link
                     
+                    if link in seen_links: continue
+                    seen_links.add(link)
+                    
                     # 4. 상세페이지 본문 추출
                     content = ""
                     try:
-                        det_resp = requests.get(link, headers=headers, timeout=15)
+                        det_resp = requests.get(link, headers=headers, timeout=15, verify=False)
                         det_resp.encoding = 'utf-8'
                         det_soup = BeautifulSoup(det_resp.text, 'html.parser')
                         

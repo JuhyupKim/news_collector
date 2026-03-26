@@ -99,15 +99,22 @@ class SamsungCrawler:
             "category2": categories[1] if len(categories) > 1 else ""
         }
 
-    def run(self, days_to_scrape=1):
+    def run(self, days_to_scrape=1, max_items=None, global_seen_links=None):
+        if max_items is not None and max_items <= 0:
+            max_items = None
+            
         self._setup_driver()
         cutoff_date = (datetime.now() - timedelta(days=days_to_scrape)).date()
         results = []
+        seen_links = set(global_seen_links) if global_seen_links else set()
         page = 1
         keep_going = True
 
         try:
             while keep_going:
+                if max_items is not None and len(results) >= max_items:
+                    break
+                    
                 self.driver.get(f"{self.base_url}/page/{page}")
                 time.sleep(2)
                 soup = BeautifulSoup(self.driver.page_source, 'html.parser')
@@ -115,6 +122,10 @@ class SamsungCrawler:
                 if not items: break
 
                 for item in items:
+                    if max_items is not None and len(results) >= max_items:
+                        keep_going = False
+                        break
+                        
                     # 목록 날짜는 YYYY/MM/DD 형식이므로 슬래시 기준으로 파싱
                     list_date_str = item.select_one('.category_data').get_text(strip=True)
                     list_date_obj = datetime.strptime(list_date_str, '%Y/%m/%d').date()
@@ -126,6 +137,9 @@ class SamsungCrawler:
                     title = item.select_one('.category_title').get_text(strip=True)
                     link = item.select_one('a.category_item')['href']
                     cat_sub = item.select_one('.category_tag').get_text(strip=True) if item.select_one('.category_tag') else ""
+
+                    if link in seen_links: continue
+                    seen_links.add(link)
 
                     try:
                         detail = self.get_detail_data(link)
