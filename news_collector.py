@@ -31,7 +31,13 @@ COLUMNS = [
 
 print(f"\n🚀 최근 {DATE_THRESHOLD}일치 데이터 수집을 시작합니다...")
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    # __file__ 이 없는 환경 (Jupyter, IPython 등)
+    base_dir = os.getcwd()
+
 db_dir = os.path.join(base_dir, 'output')
 os.makedirs(db_dir, exist_ok=True)
 history_file = os.path.join(db_dir, '.crawled_history.txt')
