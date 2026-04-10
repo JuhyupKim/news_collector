@@ -6,7 +6,7 @@ import sys
 import io
 
 # 콘솔 출력 인코딩 설정 (cp949 오류 방지)
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
 
 def find_css_selector(element):
     """주어진 BeautifulSoup 엘리먼트의 유일한 CSS 선택자를 찾습니다."""
@@ -82,8 +82,15 @@ from datetime import datetime, timedelta
 import time
 import re
 import csv
+import sys
+import io
 
-def get_{crawler_name}_data(days_to_scrape=1):
+# 콘솔 출력 인코딩 설정 (cp949 오류 방지)
+sys.stdout.reconfigure(encoding='utf-8')
+
+def get_{crawler_name}_data(days_to_scrape=1, max_items=None, seen_links=None):
+    if seen_links is None:
+        seen_links = set()
     cutoff_date = (datetime.now() - timedelta(days=days_to_scrape)).date()
     results = []
     base_url = "{base_url}"
@@ -133,18 +140,28 @@ def get_{crawler_name}_data(days_to_scrape=1):
                             
                     link = raw_link if raw_link.startswith('http') else base_url.rstrip('/') + '/' + raw_link.lstrip('/')
                     
+                    if link in seen_links:
+                        continue
+                    
                     # 날짜 추출 (날짜가 없으면 오늘 날짜로)
-                    date_elem = item.select_one("{date_selector}")
+                    date_elem = item.select_one("{date_selector}") if "{date_selector}" else item
                     full_date_time = datetime.now().strftime("%Y-%m-%d 00:00:00")
                     
                     if date_elem:
-                        date_text = date_elem.get_text(strip=True)
-                        date_match = re.search(r'(\d{{4}}[-./]\d{{2}}[-./]\d{{2}})', date_text)
+                        date_text = date_elem.get_text(separator=' ', strip=True)
+                        date_match = re.search(r'(\\d{{4}}[-./]\\d{{2}}[-./]\\d{{2}})', date_text)
+                        short_date_match = re.search(r'(?<!\\d)(0[1-9]|1[0-2])[-./](0[1-9]|[12]\\d|3[01])(?!\\d)', date_text)
+                        
+                        ext_date = None
                         if date_match:
                             ext_date = date_match.group(1).replace('.', '-').replace('/', '-')
+                        elif short_date_match:
+                            curr_year = datetime.now().year
+                            ext_date = f"{{curr_year}}-{{short_date_match.group(1)}}-{{short_date_match.group(2)}}"
                             
+                        if ext_date:
                             # 시간도 있다면 추출
-                            time_match = re.search(r'(\d{{2}}:\d{{2}}(?::\d{{2}})?)', date_text)
+                            time_match = re.search(r'(\\d{{2}}:\\d{{2}}(?::\\d{{2}})?)', date_text)
                             ext_time = time_match.group(1) if time_match else "00:00:00"
                             if len(ext_time) == 5:
                                 ext_time += ":00"
@@ -207,7 +224,11 @@ def get_{crawler_name}_data(days_to_scrape=1):
                         'MONTH': date_obj.month,
                         'WEEK': date_obj.isocalendar()[1]
                     }})
+                    seen_links.add(link)
                     time.sleep(1) # 서버 트래픽 보호
+                    
+                    if max_items and len(results) >= max_items:
+                        return results
                     
                 except Exception as item_e:
                     print(f"  ❌ 항목 오류: {{item_e}}")

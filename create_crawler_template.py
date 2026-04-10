@@ -3,7 +3,7 @@ import sys
 import io
 
 # 콘솔 출력 인코딩 설정
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
 
 TEMPLATE = """import requests
 from bs4 import BeautifulSoup

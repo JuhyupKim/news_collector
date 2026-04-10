@@ -1,7 +1,7 @@
 import sys
 import io
 import time
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+sys.stdout.reconfigure(encoding='utf-8')
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options

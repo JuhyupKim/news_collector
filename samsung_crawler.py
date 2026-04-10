@@ -22,6 +22,8 @@ class SamsungCrawler:
         
         self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
         self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        self.driver.set_page_load_timeout(30)
+        self.driver.set_script_timeout(30)
 
     def _format_datetime(self, date_str):
         """
